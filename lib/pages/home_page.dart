@@ -5,6 +5,13 @@ import 'dart:convert';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_easyrefresh/easy_refresh.dart';
+import '../routers/application.dart';
+
+//--------
+import 'package:provide/provide.dart';
+import '../provide/child_category.dart';
+import '../provide/currentIndex.dart';
+import '../model/category.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -158,7 +165,10 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
        List<Widget> listWidget = hotGoodsList.map((val){
           
           return InkWell(
-            onTap:(){print('点击了火爆商品');},
+            onTap:(){
+
+              Application.router.navigateTo(context,"/detail?id=${val['goodsId']}");
+            },
             child: 
             Container(
               width: ScreenUtil().setWidth(372),
@@ -236,7 +246,12 @@ class SwiperDiy extends StatelessWidget{
       child: Swiper(
         itemBuilder: (BuildContext context,int index){
           return InkWell(
-            onTap: (){print('点击了第${index}图片');},
+            onTap: (){
+              
+             
+               Application.router.navigateTo(context,"/detail?id=${swiperDataList[index]['goodsId']}");
+
+            },
             child:  Image.network("${swiperDataList[index]['image']}",fit:BoxFit.fill),
           );
          
@@ -254,9 +269,12 @@ class SwiperDiy extends StatelessWidget{
 class TopNavigator extends StatelessWidget {
   final List navigatorList;
   TopNavigator({Key key, this.navigatorList}) : super(key: key);
-  Widget _gridViewItemUI(BuildContext context,item){
+  Widget _gridViewItemUI(BuildContext context,item,index){
+    // print('------------------${item}');
     return InkWell(
-      onTap: (){print('点击了导航');},
+      onTap: (){
+        _goCategory(context,index,item['mallCategoryId']);
+      },
       child: Column(
         children: <Widget>[
           Image.network(item['image'],width:ScreenUtil().setWidth(95)),
@@ -266,12 +284,24 @@ class TopNavigator extends StatelessWidget {
     );
   }
 
+  void _goCategory(context,int index,String categroyId) async {
+    await request('getCategory').then((val) {
+      var data = json.decode(val.toString());
+      CategoryModel category = CategoryModel.fromJson(data);
+      List   list = category.data;
+      Provide.value<ChildCategory>(context).changeCategory(categroyId,index);
+      Provide.value<ChildCategory>(context).getChildCategory( list[index].bxMallSubDto,categroyId);
+      Provide.value<CurrentIndexProvide>(context).changeIndex(1);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
 
     if(navigatorList.length>10){
       navigatorList.removeRange(10, navigatorList.length);
     }
+    var tempIndex=-1;
     return Container(
        color:Colors.white,
       margin: EdgeInsets.only(top: 5.0),
@@ -282,7 +312,9 @@ class TopNavigator extends StatelessWidget {
         crossAxisCount: 5,
         padding: EdgeInsets.all(4.0),
         children: navigatorList.map((item){
-          return _gridViewItemUI(context, item);
+          tempIndex++;
+          return _gridViewItemUI(context, item,tempIndex);
+          
         }).toList(),
       ),
     );
@@ -343,16 +375,16 @@ class Recommend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-       
-       margin: EdgeInsets.only(top: 10.0),
-       child: Column(
-         children: <Widget>[
-           _titleWidget(),
-           _recommedList()
-         ],
-       ),
-    );
+    return  Container(
+        margin: EdgeInsets.only(top: 10.0),
+        child: Column(
+          children: <Widget>[
+            _titleWidget(),
+            _recommedList(context)
+          ],
+        ),
+      );
+   
   }
 
 //推荐商品标题
@@ -373,25 +405,28 @@ class Recommend extends StatelessWidget {
      );
   }
 
-  Widget _recommedList(){
+  Widget _recommedList(BuildContext context){
 
       return  Container(
-        height: ScreenUtil().setHeight(350),
+        height: ScreenUtil().setHeight(380),
+       
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: recommendList.length,
           itemBuilder: (context,index){
-            return _item(index);
+            return _item(index,context);
           },
         ),
       );
   }
 
-  Widget _item(index){
+  Widget _item(index,context){
     return InkWell(
-      onTap: (){},
+      onTap: (){
+         Application.router.navigateTo(context,"/detail?id=${recommendList[index]['goodsId']}");
+      },
       child: Container(
-        height: ScreenUtil().setHeight(340),
+       
         width: ScreenUtil().setWidth(280),
         padding: EdgeInsets.all(8.0),
         decoration:BoxDecoration(
@@ -445,42 +480,44 @@ class FloorContent extends StatelessWidget {
     return Container(
       child: Column(
         children: <Widget>[
-          _firstRow(),
-          _otherGoods()
+          _firstRow(context),
+          _otherGoods(context)
         ],
       ),
     );
   }
 
-  Widget _firstRow(){
+  Widget _firstRow(context){
     return Row(
       children: <Widget>[
-        _goodsItem(floorGoodsList[0]),
+        _goodsItem(context,floorGoodsList[0]),
         Column(
           children: <Widget>[
-           _goodsItem(floorGoodsList[1]),
-           _goodsItem(floorGoodsList[2]),
+           _goodsItem(context,floorGoodsList[1]),
+           _goodsItem(context,floorGoodsList[2]),
           ],
         )
       ],
     );
   }
 
-  Widget _otherGoods(){
+  Widget _otherGoods(context){
     return Row(
       children: <Widget>[
-       _goodsItem(floorGoodsList[3]),
-       _goodsItem(floorGoodsList[4]),
+       _goodsItem(context,floorGoodsList[3]),
+       _goodsItem(context,floorGoodsList[4]),
       ],
     );
   }
 
-  Widget _goodsItem(Map goods){
+  Widget _goodsItem(context,Map goods){
 
     return Container(
       width:ScreenUtil().setWidth(375),
       child: InkWell(
-        onTap:(){print('点击了楼层商品');},
+        onTap:(){
+          Application.router.navigateTo(context, "/detail?id=${goods['goodsId']}");
+        },
         child: Image.network(goods['image']),
       ),
     );
